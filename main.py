@@ -5,6 +5,8 @@ import uuid
 
 app = FastAPI(title="GPT-to-GPT Messaging Relay Plugin")
 
+message_log = []  # In-memory log store
+
 @app.post("/message/send")
 async def send_message(request: Request):
     try:
@@ -19,11 +21,33 @@ async def send_message(request: Request):
         message_id = f"msg_{uuid.uuid4().hex[:12]}"
         timestamp = datetime.utcnow().isoformat() + "Z"
 
+        # Log the message
+        message_log.append({
+            "timestamp": timestamp,
+            "from": from_agent,
+            "to": to_agent,
+            "intent": payload.get("intent", "unspecified"),
+            "summary": payload.get("context", {}).get("message", "") or payload.get("message", "")
+        })
+
         return {
             "status": "success",
             "message_id": message_id,
             "timestamp": timestamp
         }
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+@app.get("/registry/history")
+async def get_history():
+    return JSONResponse(content={"log": message_log[-50:]})
+
+@app.post("/registry/history")
+async def add_history(request: Request):
+    try:
+        data = await request.json()
+        message_log.append(data)
+        return {"status": "added", "entries": len(message_log)}
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": str(e)})
 
