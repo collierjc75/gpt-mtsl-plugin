@@ -5,7 +5,8 @@ import uuid
 
 app = FastAPI(title="GPT-to-GPT Messaging Relay Plugin")
 
-message_log = []  # In-memory log store
+# Agent-specific in-memory MTSL logs
+agent_logs = {}
 
 @app.post("/message/send")
 async def send_message(request: Request):
@@ -21,14 +22,20 @@ async def send_message(request: Request):
         message_id = f"msg_{uuid.uuid4().hex[:12]}"
         timestamp = datetime.utcnow().isoformat() + "Z"
 
-        # Log the message
-        message_log.append({
-            "timestamp": timestamp,
+        # Build full MTSL message
+        mtsl_message = {
+            "type": "MTSL",
             "from": from_agent,
             "to": to_agent,
-            "intent": payload.get("intent", "unspecified"),
-            "summary": payload.get("context", {}).get("message", "") or payload.get("message", "")
-        })
+            "timestamp": timestamp,
+            "payload": payload
+        }
+
+        # Store in logs for both sender and receiver
+        for agent in [from_agent, to_agent]:
+            if agent not in agent_logs:
+                agent_logs[agent] = []
+            agent_logs[agent].append(mtsl_message)
 
         return {
             "status": "success",
@@ -38,16 +45,19 @@ async def send_message(request: Request):
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": str(e)})
 
-@app.get("/registry/history")
-async def get_history():
-    return JSONResponse(content={"log": message_log[-50:]})
+@app.get("/registry/history/{agent}")
+async def get_agent_history(agent: str):
+    log = agent_logs.get(agent, [])[-50:]  # Last 50 entries
+    return JSONResponse(content={"log": log})
 
-@app.post("/registry/history")
-async def add_history(request: Request):
+@app.post("/registry/history/{agent}")
+async def add_agent_history(agent: str, request: Request):
     try:
         data = await request.json()
-        message_log.append(data)
-        return {"status": "added", "entries": len(message_log)}
+        if agent not in agent_logs:
+            agent_logs[agent] = []
+        agent_logs[agent].append(data)
+        return {"status": "added", "entries": len(agent_logs[agent])}
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": str(e)})
 
