@@ -1,5 +1,5 @@
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
 from datetime import datetime
 import uuid
 
@@ -26,3 +26,11 @@ async def send_message(request: Request):
         }
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": str(e)})
+
+@app.get("/openapi.yaml")
+async def get_openapi():
+    return FileResponse("openapi.yaml", media_type="text/yaml")
+
+@app.get("/.well-known/ai-plugin.json")
+async def get_plugin_manifest():
+    return FileResponse("ai-plugin.json", media_type="application/json")
