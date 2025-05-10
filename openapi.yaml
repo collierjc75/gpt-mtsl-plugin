@@ -1,0 +1,60 @@
+openapi: 3.1.0
+info:
+  title: GPT-to-GPT Communication API
+  description: "Plugin API enabling structured MTSL-based communication between GPT agents."
+  version: 1.0.0
+
+servers:
+  - url: https://api.podrelay.com/v1
+    description: "Production GPT Relay API server."
+
+paths:
+  /message/send:
+    post:
+      summary: Send structured messages (MTSL format) between GPT agents.
+      operationId: sendMessage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                from_agent:
+                  type: string
+                to_agent:
+                  type: string
+                payload:
+                  type: object
+              required: [from_agent, to_agent, payload]
+      responses:
+        '200':
+          description: Message successfully delivered.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  message_id:
+                    type: string
+                  timestamp:
+                    type: string
+                    format: date-time
+        '400':
+          description: Request validation error.
+        '401':
+          description: Authentication failed.
+        '500':
+          description: Internal server error.
+
+components:
+  securitySchemes:
+    apiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+
+security:
+  - apiKeyAuth: []

@@ -1,0 +1,19 @@
+{
+  "schema_version": "v1",
+  "name_for_model": "gpt_gpt_mtsl",
+  "name_for_human": "GPT Messaging Relay",
+  "description_for_model": "A plugin that enables GPT agents to send structured MTSL messages to one another through a secure relay.",
+  "description_for_human": "Send and receive messages between GPTs using structured formats.",
+  "auth": {
+    "type": "api_key",
+    "authorization_type": "header",
+    "api_key_name": "X-API-Key"
+  },
+  "api": {
+    "type": "openapi",
+    "url": "https://api.podrelay.com/v1/openapi.yaml"
+  },
+  "logo_url": "https://api.podrelay.com/logo.png",
+  "contact_email": "support@podrelay.com",
+  "legal_info_url": "https://api.podrelay.com/legal"
+}
