@@ -1,36 +1,33 @@
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse, FileResponse
+from concord_session_engine import ConcordSessionEngine
 from datetime import datetime
-import uuid
 
-app = FastAPI(title="GPT-to-GPT Messaging Relay Plugin")
+app = FastAPI(title="GPT MTSL Dispatch Plugin", version="1.1")
 
-@app.post("/message/send")
-async def send_message(request: Request):
+engine = ConcordSessionEngine()
+
+@app.get("/health")
+def health():
+    return {"status": "OK", "timestamp": datetime.utcnow().isoformat() + "Z"}
+
+@app.post("/dispatch")
+async def dispatch(request: Request):
     try:
-        data = await request.json()
-        from_agent = data.get("from_agent")
-        to_agent = data.get("to_agent")
-        payload = data.get("payload")
+        capsule = await request.json()
+        required = {"type", "timestamp", "from", "to", "intent", "payload", "ttl"}
+        if not required.issubset(capsule):
+            return {"status": "error", "reason": "Missing required MTSL fields", "timestamp": datetime.utcnow().isoformat() + "Z"}
 
-        if not from_agent or not to_agent or not payload:
-            return JSONResponse(status_code=400, content={"error": "Missing required fields."})
-
-        message_id = f"msg_{uuid.uuid4().hex[:12]}"
-        timestamp = datetime.utcnow().isoformat() + "Z"
-
+        result = engine.relay(capsule)
         return {
-            "status": "success",
-            "message_id": message_id,
-            "timestamp": timestamp
+            "status": "ok",
+            "dispatch_result": result,
+            "timestamp": datetime.utcnow().isoformat() + "Z"
         }
+
     except Exception as e:
-        return JSONResponse(status_code=500, content={"error": str(e)})
-
-@app.get("/openapi.yaml")
-async def get_openapi():
-    return FileResponse("openapi.yaml", media_type="text/yaml")
-
-@app.get("/.well-known/ai-plugin.json")
-async def get_plugin_manifest():
-    return FileResponse("ai-plugin.json", media_type="application/json")
+        return {
+            "status": "error",
+            "detail": str(e),
+            "timestamp": datetime.utcnow().isoformat() + "Z"
+        }
